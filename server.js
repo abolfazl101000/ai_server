@@ -1,39 +1,45 @@
-const express = require('express');
-const fetch = require('node-fetch');
-const cors = require('cors');
+import express from "express";
+import cors from "cors";
+import OpenAI from "openai";
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-// *** اینجا کلید OpenAI خودتو بزار ***
-const API_KEY = "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";
+// 🔥 چاپ مقدار API KEY برای تست در لاگ Render
+console.log("🔍 Loaded OPENAI_API_KEY:", process.env.OPENAI_API_KEY ? "FOUND ✔️" : "❌ NOT FOUND");
 
-app.post("/chat", async (req, res) => {
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: req.body.message }]
-      })
-    });
-
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// 🔥 اتصال به OpenAI با متغیر محیطی
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
+// تست سرور
 app.get("/", (req, res) => {
   res.send("AI Server is Running ✔️");
 });
 
-app.listen(10000, () => {
-  console.log("Server running on port 10000");
+// مسیر چت
+app.post("/chat", async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message) return res.status(400).json({ error: "Message is required" });
+
+    const response = await client.responses.create({
+      model: "gpt-4.1-mini",
+      input: message,
+    });
+
+    return res.json({ reply: response.output_text });
+
+  } catch (err) {
+    console.log("🔥 ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// اجرای سرور
+app.listen(process.env.PORT || 3000, () => {
+  console.log("🚀 Server running...");
 });
